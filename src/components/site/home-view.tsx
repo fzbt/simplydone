@@ -46,7 +46,7 @@ export function HomeView({ onPick }: HomeViewProps) {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-balance text-sm text-muted-foreground sm:mt-5 sm:text-lg">
             Compress, convert, merge, generate. No tabs, no ads, no signups —
-            just the tools you reach for every day, in one consistent place.
+            just the tools you reach for every day, in one consistent place, SimplyDone.
           </p>
 
           <div className="mx-auto mt-6 max-w-2xl sm:mt-8">
