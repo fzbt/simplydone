@@ -23,11 +23,11 @@ export function ToolShell({ tool, children, className }: ToolShellProps) {
   const Icon = tool.icon;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-4 sm:px-6 sm:pt-10">
       {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
-        className="mb-6 flex items-center gap-1 text-sm text-muted-foreground"
+        className="mb-4 flex items-center gap-1 text-sm text-muted-foreground sm:mb-6"
       >
         <Link
           href="/"
@@ -45,20 +45,20 @@ export function ToolShell({ tool, children, className }: ToolShellProps) {
       </nav>
 
       {/* Header */}
-      <header className="mb-8 flex items-start gap-4">
+      <header className="mb-6 flex items-start gap-3 sm:mb-8 sm:gap-4">
         <div
           className={cn(
-            "flex size-12 shrink-0 items-center justify-center rounded-2xl",
+            "flex size-10 shrink-0 items-center justify-center rounded-2xl sm:size-12",
             category?.bg
           )}
         >
-          <Icon className={cn("size-6", category?.accent)} />
+          <Icon className={cn("size-5 sm:size-6", category?.accent)} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-3xl">
             {tool.name}
           </h1>
-          <p className="mt-1 text-muted-foreground">{tool.description}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tool.description}</p>
         </div>
       </header>
 

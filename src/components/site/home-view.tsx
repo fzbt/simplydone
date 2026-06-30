@@ -22,10 +22,6 @@ export function HomeView({ onPick }: HomeViewProps) {
   return (
     <div className="animate-fade-in">
       {/* ───────────── Hero ───────────── */}
-      {/* overflow-visible so the search dropdown can escape; the decorative
-          layers are clipped by an inner absolute wrapper instead.
-          z-20 puts the hero (and its search dropdown) above the popular
-          section below (z-10) so the dropdown isn't covered. */}
       <section className="relative z-20 overflow-visible border-b border-border">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="bg-grid absolute inset-0 opacity-50" />
@@ -37,23 +33,23 @@ export function HomeView({ onPick }: HomeViewProps) {
             }}
           />
         </div>
-        <div className="relative mx-auto w-full max-w-4xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pb-28 sm:pt-28">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+        <div className="relative mx-auto w-full max-w-4xl px-4 pb-12 pt-12 text-center sm:px-6 sm:pb-28 sm:pt-28">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur sm:mb-6">
             <span className="size-1.5 rounded-full bg-emerald-500" />
             23 tools · zero accounts · 100% local-first
           </div>
-          <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
             One place for{" "}
             <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent dark:from-emerald-400 dark:to-emerald-300">
               life&apos;s little tasks
             </span>
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-4 max-w-xl text-balance text-sm text-muted-foreground sm:mt-5 sm:text-lg">
             Compress, convert, merge, generate. No tabs, no ads, no signups —
             just the tools you reach for every day, in one consistent place.
           </p>
 
-          <div className="mx-auto mt-8 max-w-2xl">
+          <div className="mx-auto mt-6 max-w-2xl sm:mt-8">
             <SearchBar onPick={onPick} autoFocus />
           </div>
         </div>
@@ -95,25 +91,25 @@ export function HomeView({ onPick }: HomeViewProps) {
             return (
               <div
                 key={cat.id}
-                className="rounded-3xl border border-border bg-card p-4 sm:p-6"
+                className="rounded-3xl border border-border bg-card p-3 sm:p-6"
               >
-                <div className="mb-4 flex items-center gap-3">
+                <div className="mb-3 flex items-center gap-3 sm:mb-4">
                   <span
                     className={cn(
-                      "flex size-10 items-center justify-center rounded-xl",
+                      "flex size-9 items-center justify-center rounded-xl sm:size-10",
                       cat.bg
                     )}
                   >
-                    <CatIcon className={cn("size-5", cat.accent)} />
+                    <CatIcon className={cn("size-4 sm:size-5", cat.accent)} />
                   </span>
                   <div>
-                    <h3 className="font-semibold tracking-tight">{cat.name}</h3>
-                    <p className="text-xs text-muted-foreground">
+                    <h3 className="text-sm font-semibold tracking-tight sm:text-base">{cat.name}</h3>
+                    <p className="hidden text-xs text-muted-foreground sm:block">
                       {cat.description}
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2">
                   {catTools.map((tool) => {
                     const Icon = tool.icon;
                     const category = categoriesById.get(tool.category);
@@ -121,25 +117,25 @@ export function HomeView({ onPick }: HomeViewProps) {
                       <button
                         key={tool.id}
                         onClick={() => onPick(tool)}
-                        className="group flex items-center gap-3 rounded-xl border border-transparent bg-muted/30 p-3 text-left transition-all hover:border-border hover:bg-muted"
+                        className="group flex items-center gap-2.5 rounded-xl border border-transparent bg-muted/30 p-2.5 text-left transition-all hover:border-border hover:bg-muted sm:gap-3 sm:p-3"
                       >
                         <span
                           className={cn(
-                            "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                            "flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-8",
                             category?.bg
                           )}
                         >
-                          <Icon className={cn("size-4", category?.accent)} />
+                          <Icon className={cn("size-3.5 sm:size-4", category?.accent)} />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">
+                          <span className="block truncate text-xs font-medium sm:text-sm">
                             {tool.name}
                           </span>
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <span className="hidden truncate text-xs text-muted-foreground sm:block">
                             {tool.description}
                           </span>
                         </span>
-                        <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+                        <ArrowRight className="hidden size-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100 sm:block" />
                       </button>
                     );
                   })}
@@ -165,18 +161,18 @@ function PopularCard({
   return (
     <button
       onClick={() => onPick(tool)}
-      className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md"
+      className="group relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md sm:gap-3 sm:p-5"
     >
       <span
         className={cn(
-          "flex size-10 items-center justify-center rounded-xl",
+          "flex size-9 items-center justify-center rounded-xl sm:size-10",
           category?.bg
         )}
       >
-        <Icon className={cn("size-5", category?.accent)} />
+        <Icon className={cn("size-4 sm:size-5", category?.accent)} />
       </span>
       <div className="flex-1">
-        <h3 className="font-medium tracking-tight">{tool.name}</h3>
+        <h3 className="text-sm font-medium tracking-tight sm:text-base">{tool.name}</h3>
         <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
           {tool.description}
         </p>
