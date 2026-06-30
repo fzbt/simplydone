@@ -39,7 +39,7 @@ export function HomeView({ onPick }: HomeViewProps) {
             23 tools · zero accounts · 100% local-first
           </div>
           <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
-            One place for{" "}
+            SimplyDone for{" "}
             <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent dark:from-emerald-400 dark:to-emerald-300">
               life&apos;s little tasks
             </span>
