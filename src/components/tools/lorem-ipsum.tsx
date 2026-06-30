@@ -10,40 +10,65 @@ import { cn } from "@/lib/utils";
 
 type Unit = "paragraphs" | "sentences" | "words";
 
-const WORDS = `
-lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud
-exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute
-irure in reprehenderit voluptate velit esse cillum eu fugiat nulla pariatur
-excepteur sint occaecat cupidatat non proident sunt culpa qui officia deserunt
-mollit anim id est laborum at vero eos accusamus iusto odio dignissimos ducimus
-qui blanditiis praesentium voluptatum deleniti atque corrupti quos quas
-molestias excepturi sint similique mollitia animi dolores eos ratione sequi
-nesciunt neque porro quisquam dolorem adipisci numquam eius modi tempora
-incidunt magnam quaerat voluptatem ut aut reiciendis voluptatibus maiores
-`.trim().split(/\s+/);
+// Use a proper array literal — more reliable than template-string split
+const WORDS = [
+  "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
+  "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
+  "magna", "aliqua", "enim", "ad", "minim", "veniam", "quis", "nostrud",
+  "exercitation", "ullamco", "laboris", "nisi", "aliquip", "ex", "ea", "commodo",
+  "consequat", "duis", "aute", "irure", "in", "reprehenderit", "voluptate",
+  "velit", "esse", "cillum", "eu", "fugiat", "nulla", "pariatur", "excepteur",
+  "sint", "occaecat", "cupidatat", "non", "proident", "sunt", "culpa", "qui",
+  "officia", "deserunt", "mollit", "anim", "id", "est", "laborum", "at", "vero",
+  "eos", "accusamus", "iusto", "odio", "dignissimos", "ducimus", "blanditiis",
+  "praesentium", "voluptatum", "deleniti", "atque", "corrupti", "quos", "quas",
+  "molestias", "excepturi", "similique", "mollitia", "animi", "dolores",
+  "ratione", "sequi", "nesciunt", "neque", "porro", "quisquam", "dolorem",
+  "adipisci", "numquam", "eius", "modi", "tempora", "incidunt", "magnam",
+  "quaerat", "voluptatem", "aut", "reiciendis", "voluptatibus", "maiores",
+];
 
-function rand(max: number) {
+function rand(max: number): number {
+  if (max <= 0) return 0;
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
   return buf[0] % max;
 }
 
+function randomWord(): string {
+  return WORDS[rand(WORDS.length)] ?? WORDS[0] ?? "lorem";
+}
+
+function capitalize(word: string): string {
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+}
+
 function makeSentence(min = 6, max = 14): string {
   const len = min + rand(max - min + 1);
-  const words = Array.from({ length: len }, () => WORDS[rand(WORDS.length)]);
-  words[0] = words[0].charAt(0).toUpperCase() + words[0].slice(1);
+  const words: string[] = [];
+  for (let i = 0; i < len; i++) {
+    words.push(randomWord());
+  }
+  if (words[0]) {
+    words[0] = capitalize(words[0]);
+  }
   // ~15% chance of comma in the middle
   if (len > 5 && rand(100) < 15) {
     const mid = Math.floor(len / 2);
-    words[mid] = words[mid] + ",";
+    if (words[mid]) {
+      words[mid] = words[mid] + ",";
+    }
   }
   return words.join(" ") + ".";
 }
 
 function makeParagraph(min = 3, max = 6): string {
   const len = min + rand(max - min + 1);
-  return Array.from({ length: len }, makeSentence).join(" ");
+  const sentences: string[] = [];
+  for (let i = 0; i < len; i++) {
+    sentences.push(makeSentence());
+  }
+  return sentences.join(" ");
 }
 
 export default function LoremIpsum() {
@@ -55,20 +80,19 @@ export default function LoremIpsum() {
   const generate = React.useCallback(() => {
     let parts: string[] = [];
     if (unit === "paragraphs") {
-      parts = Array.from({ length: count }, () => makeParagraph());
+      for (let i = 0; i < count; i++) parts.push(makeParagraph());
     } else if (unit === "sentences") {
-      parts = Array.from({ length: count }, () => makeSentence());
+      for (let i = 0; i < count; i++) parts.push(makeSentence());
     } else {
-      parts = Array.from({ length: count }, () => WORDS[rand(WORDS.length)]);
+      for (let i = 0; i < count; i++) parts.push(randomWord());
     }
-    if (startClassic && unit !== "words") {
-      const first = parts[0];
-      // Replace beginning with the classic "Lorem ipsum dolor sit amet…"
+
+    if (startClassic && unit !== "words" && parts.length > 0) {
+      const first = parts[0] ?? "";
       const classic = "Lorem ipsum dolor sit amet, consectetur adipiscing elit";
       if (unit === "sentences") {
         parts[0] = classic + ".";
       } else {
-        // Replace first sentence of the first paragraph
         const firstSentenceEnd = first.indexOf(".");
         if (firstSentenceEnd > 0) {
           parts[0] = classic + first.slice(firstSentenceEnd);
@@ -135,7 +159,7 @@ export default function LoremIpsum() {
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Result · {output ? output.split(/\s+/).length : 0} words
+            Result · {output ? output.split(/\s+/).filter(Boolean).length : 0} words
           </p>
           <CopyButton value={output} label="Copy" />
         </div>
