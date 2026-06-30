@@ -9,16 +9,14 @@ import { useToolRoute } from "@/lib/tools/use-tool-route";
 import type { ToolMeta } from "@/lib/tools/types";
 import { toast } from "sonner";
 
-export default function HomePage() {
+function HomePageContent() {
   const { activeTool, setTool } = useToolRoute();
 
-  // ⌘K shortcut focuses search on home view
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setTool(null);
-        // Focus the search input after the route settles
         setTimeout(() => {
           const input = document.querySelector<HTMLInputElement>(
             'input[aria-label="Search tools"]'
@@ -53,5 +51,19 @@ export default function HomePage() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-sm text-muted-foreground">Loading…</div>
+        </div>
+      }
+    >
+      <HomePageContent />
+    </React.Suspense>
   );
 }
