@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles, Pipette } from "lucide-react";
+import { Sparkles, Wand2, Pipette, Cpu, Zap, AlertTriangle } from "lucide-react";
 import { UploadZone, formatBytes } from "@/components/site/upload-zone";
 import { ResultCard } from "@/components/site/result-card";
 import { DownloadButton } from "@/components/site/download-button";
@@ -16,16 +16,26 @@ import {
   replaceExtension,
 } from "@/lib/tools/image-utils";
 
+type Mode = "ai" | "simple";
+
+interface Progress {
+  stage: "idle" | "downloading" | "processing" | "done";
+  message: string;
+  percent?: number;
+}
+
 export default function RemoveBackground() {
+  const [mode, setMode] = React.useState<Mode>("ai");
   const [file, setFile] = React.useState<File | null>(null);
   const [imgUrl, setImgUrl] = React.useState<string>("");
-  const [naturalW, setNaturalW] = React.useState(0);
-  const [naturalH, setNaturalH] = React.useState(0);
+  const [busy, setBusy] = React.useState(false);
+  const [progress, setProgress] = React.useState<Progress>({ stage: "idle", message: "" });
+  const [result, setResult] = React.useState<{ blob: Blob; filename: string } | null>(null);
+
+  // Simple-mode state
   const [bgColor, setBgColor] = React.useState<[number, number, number] | null>(null);
   const [tolerance, setTolerance] = React.useState(32);
   const [feather, setFeather] = React.useState(8);
-  const [busy, setBusy] = React.useState(false);
-  const [result, setResult] = React.useState<{ blob: Blob; filename: string } | null>(null);
   const previewRef = React.useRef<HTMLCanvasElement>(null);
   const imageRef = React.useRef<HTMLImageElement | null>(null);
 
@@ -34,22 +44,22 @@ export default function RemoveBackground() {
     if (!f) return;
     setFile(f);
     setResult(null);
+    setProgress({ stage: "idle", message: "" });
     const url = URL.createObjectURL(f);
     setImgUrl(url);
     const img = await loadImageFromFile(f);
     imageRef.current = img;
-    setNaturalW(img.naturalWidth);
-    setNaturalH(img.naturalHeight);
-    // Auto-detect background color from the top-left pixel
+    // Auto-detect background color from the top-left pixel (used by simple mode)
     const c = createCanvas({ width: 1, height: 1 });
     const ctx = c.getContext("2d")!;
     ctx.drawImage(img, 0, 0, 1, 1);
     const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
     setBgColor([r, g, b]);
-    drawPreview();
+    drawSimplePreview();
   };
 
-  const drawPreview = React.useCallback(() => {
+  // Simple-mode preview rendering
+  const drawSimplePreview = React.useCallback(() => {
     const img = imageRef.current;
     const canvas = previewRef.current;
     if (!img || !canvas || !bgColor) return;
@@ -80,9 +90,10 @@ export default function RemoveBackground() {
   }, [bgColor, tolerance, feather]);
 
   React.useEffect(() => {
-    drawPreview();
-  }, [drawPreview]);
+    if (mode === "simple") drawSimplePreview();
+  }, [mode, drawSimplePreview]);
 
+  // Simple-mode color picker
   const pickColor = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = previewRef.current;
     if (!canvas) return;
@@ -90,14 +101,14 @@ export default function RemoveBackground() {
     const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
     const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
     const ctx = canvas.getContext("2d")!;
-    // Re-draw original to read color from a fresh source
     const img = imageRef.current!;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     const data = ctx.getImageData(x, y, 1, 1).data;
     setBgColor([data[0], data[1], data[2]]);
   };
 
-  const process = async () => {
+  // Simple-mode processing (full resolution)
+  const runSimple = async () => {
     if (!file || !bgColor || !imageRef.current) return;
     setBusy(true);
     try {
@@ -133,6 +144,57 @@ export default function RemoveBackground() {
     }
   };
 
+  // AI-mode processing using @imgly/background-removal
+  const runAI = async () => {
+    if (!file) return;
+    setBusy(true);
+    setProgress({ stage: "downloading", message: "Loading AI model… (first run downloads ~80MB, then cached)" });
+    try {
+      // Dynamic import so the heavy library only loads when this tool is used
+      const { removeBackground } = await import("@imgly/background-removal");
+      setProgress({ stage: "processing", message: "Removing background with AI…" });
+
+      const blob = await removeBackground(file, {
+        progress: (key: string, current: number, total: number) => {
+          // The library reports download progress as "fetch:..." keys
+          if (key.startsWith("fetch")) {
+            const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+            setProgress({
+              stage: "downloading",
+              message: `Downloading AI model… ${percent}%`,
+              percent,
+            });
+          } else {
+            setProgress({
+              stage: "processing",
+              message: "Analyzing image and removing background…",
+            });
+          }
+        },
+        output: { format: "image/png" },
+      });
+
+      setResult({ blob, filename: replaceExtension(file.name, "png") });
+      setProgress({ stage: "done", message: "" });
+      toast.success("Background removed with AI");
+    } catch (e) {
+      console.error(e);
+      setProgress({ stage: "idle", message: "" });
+      toast.error(
+        e instanceof Error && e.message.includes("WebAssembly")
+          ? "Your browser doesn't support WebAssembly. Try the Simple mode instead."
+          : "AI processing failed. Try Simple mode or a different image."
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const process = () => {
+    if (mode === "ai") runAI();
+    else runSimple();
+  };
+
   return (
     <div className="space-y-6">
       {!result && (
@@ -144,13 +206,110 @@ export default function RemoveBackground() {
             setFile(null);
             setImgUrl("");
             setBgColor(null);
+            setProgress({ stage: "idle", message: "" });
           }}
           label="Drop an image, or click to browse"
-          hint="Best results with a solid-color background"
+          hint="PNG, JPG or WebP — AI mode works best with people or objects"
         />
       )}
 
-      {file && !result && (
+      {/* Mode selector */}
+      {!result && file && (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Removal mode
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => setMode("ai")}
+              className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                mode === "ai"
+                  ? "border-brand bg-brand-muted/30"
+                  : "border-border hover:bg-muted"
+              }`}
+            >
+              <Cpu className={`size-5 shrink-0 ${mode === "ai" ? "text-brand" : "text-muted-foreground"}`} />
+              <div className="flex-1">
+                <p className="text-sm font-medium">AI Removal</p>
+                <p className="text-xs text-muted-foreground">
+                  Neural network — works on any background. ~5-15s.
+                </p>
+              </div>
+            </button>
+            <button
+              onClick={() => setMode("simple")}
+              className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                mode === "simple"
+                  ? "border-brand bg-brand-muted/30"
+                  : "border-border hover:bg-muted"
+              }`}
+            >
+              <Zap className={`size-5 shrink-0 ${mode === "simple" ? "text-brand" : "text-muted-foreground"}`} />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Simple (color key)</p>
+                <p className="text-xs text-muted-foreground">
+                  Fast — best for solid-color backgrounds. &lt;1s.
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI mode info / progress */}
+      {file && !result && mode === "ai" && (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          {progress.stage === "idle" ? (
+            <div className="flex items-start gap-3 rounded-lg bg-muted/40 p-3 text-sm">
+              <AlertTriangle className="size-4 shrink-0 text-amber-500" />
+              <div className="flex-1">
+                <p className="font-medium">First-run heads up</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  The AI model (~80MB) downloads on first use and is cached afterwards.
+                  Subsequent runs are much faster. Processing happens entirely in your
+                  browser — your image never gets uploaded anywhere.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="relative flex size-12 items-center justify-center">
+                <div className="absolute inset-0 animate-ping rounded-full bg-brand/20" />
+                <div className="relative flex size-12 items-center justify-center rounded-full bg-brand text-brand-foreground">
+                  <Sparkles className="size-5" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium">{progress.message}</p>
+                {progress.percent !== undefined && (
+                  <div className="mt-2 h-1.5 w-48 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full bg-brand transition-all"
+                      style={{ width: `${progress.percent}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <Button
+            onClick={process}
+            disabled={busy || progress.stage === "downloading"}
+            className="mt-5 w-full"
+            size="lg"
+          >
+            <Wand2 className="size-4" />
+            {busy
+              ? "Working…"
+              : progress.stage === "downloading"
+                ? "Downloading model…"
+                : "Remove background with AI"}
+          </Button>
+        </div>
+      )}
+
+      {/* Simple mode controls */}
+      {file && !result && mode === "simple" && (
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="space-y-4">
             <div>
@@ -226,10 +385,11 @@ export default function RemoveBackground() {
         </div>
       )}
 
+      {/* Result */}
       {result && (
         <ResultCard
           status="success"
-          title="Background removed"
+          title={`Background removed ${mode === "ai" ? "with AI" : "(simple mode)"}`}
           actions={
             <>
               <DownloadButton data={result.blob} filename={result.filename} />
@@ -240,6 +400,7 @@ export default function RemoveBackground() {
                   setFile(null);
                   setImgUrl("");
                   setBgColor(null);
+                  setProgress({ stage: "idle", message: "" });
                 }}
               >
                 Process another
@@ -260,10 +421,7 @@ export default function RemoveBackground() {
         </ResultCard>
       )}
 
-      {/* Hidden src image kept for preview rendering when needed */}
-      {imgUrl && (
-        <img src={imgUrl} alt="" className="hidden" aria-hidden />
-      )}
+      {imgUrl && <img src={imgUrl} alt="" className="hidden" aria-hidden />}
     </div>
   );
 }
